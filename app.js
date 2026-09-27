@@ -2,6 +2,8 @@ import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transfo
 env.allowLocalModels=false;
 env.useBrowserCache=true;
 
+const MIN_CONFIDENCE=0.72;
+const MIN_MARGIN=0.12;
 const MODEL="onnx-community/mobilenet_v2_1.0_224-plant-disease-identification-ONNX";
 const $=s=>document.querySelector(s);
 let file=null,model=null,objectUrl=null;
@@ -96,7 +98,9 @@ $("#scanBtn").onclick=async()=>{
    const out=await classifier(img,{top_k:3});
    if(!Array.isArray(out)||!out.length)throw new Error("The model returned no prediction.");
    const top=out[0],conf=Number(top.score)||0,label=top.label||"Unknown";
-   const uncertain=conf<0.60;
+   const second=Number(out[1]?.score)||0;
+   const margin=conf-second;
+   const uncertain=conf<MIN_CONFIDENCE||margin<MIN_MARGIN;
    $("#diseaseName").textContent=uncertain?"Uncertain result — retake the photo":pretty(label);
    $("#cropName").textContent=uncertain?"The model is not confident enough to name a disease.":"Crop: "+crop(label);
    $("#confidenceBadge").textContent=Math.round(conf*100)+"% model confidence";
