@@ -1,82 +1,54 @@
-import json, os
+import json,os
+from io import BytesIO
 import numpy as np
-import streamlit as st
-from PIL import Image
+from PIL import Image,ImageOps
+from flask import Flask,jsonify,request,send_from_directory
 import onnxruntime as ort
 from huggingface_hub import hf_hub_download
-
-st.set_page_config(page_title="CropCare AI", page_icon="🌿", layout="centered")
-
-MODEL_REPO="BiernyVR/crop-disease-classifier"
-MODEL_FILE="efficientnet_v2_s_best.onnx"
-MODEL_DATA="efficientnet_v2_s_best.onnx.data"
-CLASSES_FILE="classes.json"
-
-@st.cache_resource
-def load_model():
-    model=hf_hub_download(MODEL_REPO, MODEL_FILE)
-    # External ONNX data file is downloaded to the same HF cache location.
-    hf_hub_download(MODEL_REPO, MODEL_DATA)
-    classes_path=hf_hub_download(MODEL_REPO, CLASSES_FILE)
-    with open(classes_path,"r",encoding="utf-8") as f:
-        classes=json.load(f)["classes"]
-    session=ort.InferenceSession(model, providers=["CPUExecutionProvider"])
-    return session, classes
-
-def predict(img, session, classes):
-    img=img.convert("RGB").resize((224,224),Image.Resampling.BILINEAR)
-    arr=np.asarray(img,dtype=np.float32)/255.0
-    arr=(arr-np.array([0.485,0.456,0.406],dtype=np.float32))/np.array([0.229,0.224,0.225],dtype=np.float32)
-    x=np.transpose(arr,(2,0,1))[None,...].astype(np.float32)
-    name=session.get_inputs()[0].name
-    logits=session.run(None,{name:x})[0][0]
-    p=np.exp(logits-np.max(logits)); p=p/p.sum()
-    idx=np.argsort(p)[::-1][:5]
-    return [(classes[int(i)],float(p[i])) for i in idx]
-
-def pretty(label):
-    return label.replace("___"," — ").replace("_"," ").replace("(","").replace(")","")
-
-def guidance(label):
-    l=label.lower()
-    if "healthy" in l: return ["Keep monitoring the plant regularly.","Maintain good airflow and avoid unnecessary leaf wetness.","Remove severely damaged leaves only if needed."]
-    if "early_blight" in l: return ["Remove badly affected leaves and dispose of them away from the crop.","Improve airflow and avoid overhead irrigation.","Confirm the diagnosis locally before applying any crop-protection product."]
-    if "late_blight" in l: return ["Separate affected plants where practical.","Keep foliage dry and improve airflow.","Seek local agricultural guidance promptly because late blight can spread quickly."]
-    if "powdery_mildew" in l: return ["Improve air circulation and reduce prolonged leaf humidity.","Remove heavily affected tissue.","Confirm the diagnosis before selecting a permitted treatment."]
-    if "rust" in l: return ["Remove heavily infected leaves where practical.","Improve airflow and avoid prolonged leaf wetness.","Monitor nearby plants for similar symptoms."]
-    if "bacterial" in l or "spot" in l: return ["Avoid handling plants when foliage is wet.","Remove severely affected tissue and sanitize tools.","Use locally approved management practices after confirming the diagnosis."]
-    if "virus" in l or "mosaic" in l or "yellow_leaf_curl" in l: return ["Control insect vectors according to local agricultural guidance.","Remove severely affected plants if recommended locally.","Do not assume chemical treatment will cure a viral infection."]
-    if "spider_mites" in l: return ["Inspect the undersides of leaves for mites and webbing.","Reduce plant stress and maintain appropriate irrigation.","Confirm the pest before choosing a control method."]
-    return ["Inspect the plant and nearby leaves for matching symptoms.","Improve sanitation, airflow and appropriate irrigation.","Confirm the result with a local agronomist or plant clinic before treatment."]
-
-st.markdown("""<style>
-.main{background:#f6f8f2}.hero{padding:30px 0 10px}.title{font-size:46px;font-weight:800;color:#173426}.title span{color:#4d8c57}.sub{font-size:18px;color:#65736a;line-height:1.6}.card{padding:22px;border:1px solid #dfe7dc;border-radius:18px;background:white}
-</style>""",unsafe_allow_html=True)
-
-st.markdown('<div class="hero"><div class="title">🌿 CropCare <span>AI</span></div><div class="sub">Real plant-disease image classification from a leaf photo.</div></div>',unsafe_allow_html=True)
-st.info("Supported model: 38 PlantVillage crop/disease classes. Use a clear, close leaf photo. Field conditions can reduce accuracy.")
-
-uploaded=st.file_uploader("Upload a leaf image",type=["jpg","jpeg","png","webp"])
-if uploaded:
-    image=Image.open(uploaded)
-    st.image(image,caption="Uploaded leaf",use_container_width=True)
-    if st.button("🔍 Analyze leaf",type="primary",use_container_width=True):
-        with st.spinner("Running the plant-disease model…"):
-            try:
-                session,classes=load_model()
-                preds=predict(image,session,classes)
-                top_label,top_conf=preds[0]
-                if top_conf < 0.70:
-                    st.warning(f"Uncertain result ({top_conf*100:.1f}% model probability). Please upload a sharper photo or a second angle.")
-                else:
-                    st.success(f"Prediction: {pretty(top_label)}")
-                    st.metric("Model confidence",f"{top_conf*100:.1f}%")
-                st.markdown("### Top predictions")
-                for label,conf in preds[:3]:
-                    st.write(f"**{pretty(label)}** — {conf*100:.1f}%")
-                st.markdown("### Suggested next steps")
-                for item in guidance(top_label):
-                    st.write("• "+item)
-                st.caption("CropCare AI is an assistive screening tool, not a laboratory or agronomist diagnosis. The model is trained on PlantVillage-style images and may perform differently on real field photographs.")
-            except Exception as e:
-                st.error("Model setup failed. Please retry. Details: "+str(e))
+app=Flask(__name__)
+REPO="BiernyVR/crop-disease-classifier"; MODEL="efficientnet_v2_s_best.onnx"; DATA="efficientnet_v2_s_best.onnx.data"; CLASSES="classes.json"; SIZE=224
+def load():
+    model=hf_hub_download(REPO,MODEL); hf_hub_download(REPO,DATA); cp=hf_hub_download(REPO,CLASSES)
+    with open(cp,encoding="utf-8") as f: classes=json.load(f)["classes"]
+    return ort.InferenceSession(model,providers=["CPUExecutionProvider"]),classes
+SESSION,CLASSES=load(); INPUT=SESSION.get_inputs()[0].name
+def prep(img):
+    a=np.asarray(img.convert("RGB").resize((SIZE,SIZE),Image.Resampling.BILINEAR),dtype=np.float32)/255
+    a=(a-np.array([.485,.456,.406],dtype=np.float32))/np.array([.229,.224,.225],dtype=np.float32)
+    return np.transpose(a,(2,0,1))[None].astype(np.float32)
+def softmax(x):
+    x=x-np.max(x); e=np.exp(x); return e/e.sum()
+def infer(img):
+    vs=[img,ImageOps.mirror(img),img.rotate(7,Image.Resampling.BILINEAR),img.rotate(-7,Image.Resampling.BILINEAR)]
+    ps=np.stack([softmax(SESSION.run(None,{INPUT:prep(v)})[0][0]) for v in vs]); mean=ps.mean(axis=0); order=np.argsort(mean)[::-1]
+    preds=[{"label":CLASSES[int(i)],"confidence":float(mean[i])} for i in order[:5]]
+    top=[int(np.argmax(p)) for p in ps]; agree=sum(x==top[0] for x in top)/len(top)
+    return preds,float(mean[order[0]]),float(mean[order[1]]),agree
+def parse(label):
+    p=label.split("___",1); return p[0].replace("_"," "),((p[1] if len(p)>1 else p[0]).replace("_"," "))
+def quality(img):
+    if img.width<256 or img.height<256:return False
+    a=np.asarray(img.resize((256,256)).convert("RGB"),dtype=np.float32)/255; g=.299*a[:,:,0]+.587*a[:,:,1]+.114*a[:,:,2]
+    return .08<g.mean()<.96 and (np.var(np.diff(g,axis=1))+np.var(np.diff(g,axis=0)))>.001
+def steps(d):
+    l=d.lower()
+    if "healthy" in l:return ["Continue regular crop monitoring.","Maintain appropriate irrigation, nutrition and airflow."]
+    if "rust" in l:return ["Inspect nearby plants for similar symptoms.","Avoid prolonged leaf wetness and confirm the diagnosis before treatment."]
+    if "blight" in l:return ["Remove severely affected tissue where appropriate.","Improve airflow and avoid unnecessary overhead irrigation.","Confirm the diagnosis before applying a crop-protection product."]
+    if "mildew" in l:return ["Improve air circulation.","Reduce prolonged humidity around foliage.","Confirm the diagnosis before treatment."]
+    if "virus" in l or "mosaic" in l:return ["Inspect for insect vectors.","Follow local agricultural guidance; chemical treatment does not cure viral infection."]
+    return ["Inspect nearby plants for similar symptoms.","Maintain sanitation, airflow and appropriate irrigation.","Confirm important diagnoses with a local agronomist or plant clinic."]
+@app.route("/")
+def home(): return send_from_directory("public","index.html")
+@app.route("/health")
+def health(): return jsonify(status="online",model="EfficientNetV2-S",classes=len(CLASSES))
+@app.route("/predict",methods=["POST"])
+def predict():
+    try:
+        if "file" not in request.files:return jsonify(error="No image file uploaded"),400
+        img=Image.open(BytesIO(request.files["file"].read())).convert("RGB")
+        if not quality(img):return jsonify(plant="Unknown",disease="UNSURE",scientific_name="—",confidence=0,uncertain=True,predictions=[],management=["Upload a sharper, well-lit close-up leaf image."])
+        preds,top,second,agree=infer(img); crop,disease=parse(preds[0]["label"]); reliable=top>=.70 and top-second>=.12 and agree>=.75
+        return jsonify(plant=crop,disease=disease if reliable else "UNSURE",scientific_name="—",confidence=top,uncertain=not reliable,agreement=agree,predictions=preds,management=steps(disease))
+    except Exception as e:return jsonify(error="Prediction failed",details=str(e)),500
+if __name__=="__main__": app.run(host="0.0.0.0",port=int(os.environ.get("PORT",5000)))
