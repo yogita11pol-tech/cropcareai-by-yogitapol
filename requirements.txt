@@ -1,5 +1,6 @@
-streamlit>=1.40
-onnxruntime>=1.18
-huggingface_hub>=0.24
+Flask>=3.0
 numpy>=1.26
 Pillow>=10.0
+onnxruntime>=1.18
+huggingface_hub>=0.24
+gunicorn>=22.0
