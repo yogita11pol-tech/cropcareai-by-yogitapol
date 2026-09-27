@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Care AI by Yogita Pol</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #f4faf5;
+            color: #173b25;
+        }
+
+        /* NAVBAR */
+        nav {
+            background: white;
+            height: 72px;
+            padding: 0 8%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #15803d;
+        }
+
+        .logo span {
+            color: #78a83b;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 28px;
+        }
+
+        nav a {
+            color: #294733;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        nav a:hover {
+            color: #15803d;
+        }
+
+        /* HERO */
+        .hero {
+            min-height: 620px;
+            padding: 80px 8%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 50px;
+            background: linear-gradient(120deg, #eaf8ed, white);
+        }
+
+        .hero-content {
+            max-width: 650px;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 9px 17px;
+            border-radius: 30px;
+            background: #dff3e3;
+            color: #15803d;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-size: 58px;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 span {
+            color: #159447;
+        }
+
+        .hero p {
+            color: #607265;
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #168c42;
+            color: white;
+            padding: 15px 28px;
+            border: none;
+            border-radius: 9px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #0b6d32;
+        }
+
+        .hero-plant {
+            width: 360px;
+            height: 360px;
+            border-radius: 50%;
+            background: #d8f0dc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 150px;
+            box-shadow: 0 25px 60px rgba(28,117,53,0.15);
+        }
+
+        /* SECTIONS */
+        section {
+            padding: 85px 8%;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 45px;
+        }
+
+        .section-title h2 {
+            font-size: 38px;
+            margin-bottom: 10px;
+        }
+
+        .section-title p {
+            color: #68776d;
+        }
+
+        /* DETECTOR */
+        .detector {
+            background: white;
+        }
+
+        .detector-container {
+            max-width: 900px;
+            margin: auto;
+            background: #f5faf6;
+            padding: 35px;
+            border-radius: 20px;
+            border: 1px solid #d9e9dc;
+        }
+
+        .upload-box {
+            background: white;
+            border: 2px dashed #6cac78;
+            border-radius: 16px;
+            padding: 50px 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .upload-box:hover {
+            border-color: #168c42;
+            background: #f8fcf9;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+
+        .upload-box h3 {
+            margin-bottom: 10px;
+        }
+
+        .upload-box p {
+            color: #718078;
+            margin-bottom: 20px;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        #preview {
+            display: none;
+            max-width: 350px;
+            max-height: 350px;
+            margin: 25px auto;
+            border-radius: 15px;
+            object-fit: cover;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+        }
+
+        #analyzeBtn {
+            display: none;
+            margin: 15px auto;
+        }
+
+        /* RESULT */
+        #result {
+            display: none;
+            margin-top: 30px;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.08);
+        }
+
+        .result-title {
+            color: #16833b;
+            margin-bottom: 20px;
+            font-size: 25px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #e4ebe5;
+        }
+
+        .disease {
+            color: #d54a3f;
+            font-weight: bold;
+        }
+
+        .confidence {
+            margin-top: 22px;
+        }
+
+        .progress {
+            width: 100%;
+            height: 12px;
+            background: #e4eae5;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 94%;
+            height: 100%;
+            background: linear-gradient(90deg, #1c9d4b, #72c84b);
+        }
+
+        .recommendation {
+            margin-top: 25px;
+            padding: 20px;
+            background: #edf8ef;
+            border-left: 5px solid #20a653;
+            border-radius: 8px;
+        }
+
+        .recommendation h4 {
+            margin-bottom: 12px;
+            color: #176b31;
+        }
+
+        .recommendation ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        /* FEATURES */
+        .features {
+            background: #f4faf5;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 35px 25px;
+            text-align: center;
+            border-radius: 16px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+            transition: 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 18px;
+        }
+
+        .feature-card h3 {
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: #69776d;
+            line-height: 1.6;
+        }
+
+        /* ABOUT */
+        .about {
+            background: white;
+        }
+
+        .about-container {
+            max-width: 900px;
+            margin: auto;
+            text-align: center;
+        }
+
+        .about-container p {
+            color: #617065;
+            line-height: 1.9;
+            font-size: 17px;
+        }
+
+        .creator {
+            margin-top: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #16833b;
+        }
+
+        /* FOOTER */
+        footer {
+            background: #12351f;
+            color: white;
+            text-align: center;
+            padding: 35px 20px;
+        }
+
+        footer h3 {
+            margin-bottom: 8px;
+        }
+
+        footer p {
+            color: #bfd1c3;
+            margin-top: 7px;
+        }
+
+        /* MOBILE */
+        @media (max-width: 800px) {
+
+            nav {
+                padding: 0 5%;
+            }
+
+            nav ul {
+                display: none;
+            }
+
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                padding: 65px 5%;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+            }
+
+            .hero-plant {
+                width: 260px;
+                height: 260px;
+                font-size: 105px;
+            }
+
+            section {
+                padding: 65px 5%;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detector-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVIGATION -->
+    <nav>
+
+        <div class="logo">
+            🌾 Crop <span>Care AI</span>
+        </div>
+
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#detect">Detect Disease</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#about">About</a></li>
+        </ul>
+
+    </nav>
+
+
+    <!-- HERO -->
+    <section class="hero" id="home">
+
+        <div class="hero-content">
+
+            <div class="tag">
+                🤖 AI-Powered Agriculture
+            </div>
+
+            <h1>
+                Protect Your Crops
+                With <span>AI</span>
+            </h1>
+
+            <p>
+                Crop Care AI helps identify possible crop diseases
+                from leaf images and provides useful treatment and
+                prevention recommendations.
+            </p>
+
+            <a href="#detect" class="btn">
+                Start Disease Detection →
+            </a>
+
+        </div>
+
+        <div class="hero-plant">
+            🌱
+        </div>
+
+    </section>
+
+
+    <!-- DISEASE DETECTION -->
+    <section class="detector" id="detect">
+
+        <div class="section-title">
+
+            <h2>🔬 Crop Disease Detection</h2>
+
+            <p>
+                Upload a clear image of an affected crop leaf
+            </p>
+
+        </div>
+
+        <div class="detector-container">
+
+            <label for="imageInput">
+
+                <div class="upload-box">
+
+                    <div class="upload-icon">
+                        📷
+                    </div>
+
+                    <h3>
+                        Upload Crop Image
+                    </h3>
+
+                    <p>
+                        Select a JPG, JPEG or PNG image
+                    </p>
+
+                    <span class="btn">
+                        Choose Image
+                    </span>
+
+                </div>
+
+            </label>
+
+            <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+            >
+
+            <img
+                id="preview"
+                alt="Uploaded crop image"
+            >
+
+            <button
+                id="analyzeBtn"
+                class="btn"
+                onclick="analyzePlant()">
+                🤖 Analyze Crop
+            </button>
+
+
+            <!-- RESULT -->
+            <div id="result">
+
+                <h3 class="result-title">
+                    🌿 AI Detection Result
+                </h3>
+
+                <div class="result-item">
+                    <strong>Crop:</strong>
+                    <span>Tomato</span>
+                </div>
+
+                <div class="result-item">
+                    <strong>Possible Disease:</strong>
+                    <span class="disease">
+                        Early Blight
+                    </span>
+                </div>
+
+                <div class="result-item">
+                    <strong>Status:</strong>
+                    <span class="disease">
+                        Disease Detected
+                    </span>
+                </div>
+
+                <div class="confidence">
+
+                    <strong>
+                        AI Confidence: 94%
+                    </strong>
+
+                    <div class="progress">
+                        <div class="progress-bar"></div>
+                    </div>
+
+                </div>
+
+                <div class="recommendation">
+
+                    <h4>
+                        💊 Recommended Care
+                    </h4>
+
+                    <ul>
+                        <li>Remove severely infected leaves.</li>
+                        <li>Avoid watering directly onto leaves.</li>
+                        <li>Maintain good air circulation.</li>
+                        <li>Keep the surrounding area clean.</li>
+                        <li>Use an appropriate fungicide when necessary.</li>
+                        <li>Monitor nearby plants regularly.</li>
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+
+        <div class="section-title">
+
+            <h2>Why Crop Care AI?</h2>
+
+            <p>
+                Technology designed to support smarter crop care
+            </p>
+
+        </div>
+
+        <div class="feature-grid">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    🤖
+                </div>
+
+                <h3>
+                    AI-Based Detection
+                </h3>
+
+                <p>
+                    Analyze crop leaf images and identify
+                    possible plant diseases.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    🔬
+                </div>
+
+                <h3>
+                    Disease Information
+                </h3>
+
+                <p>
+                    Get information about possible
+                    crop diseases.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    🌱
+                </div>
+
+                <h3>
+                    Crop Care
+                </h3>
+
+                <p>
+                    Receive general treatment and
+                    prevention recommendations.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ABOUT -->
+    <section class="about" id="about">
+
+        <div class="section-title">
+
+            <h2>About Crop Care AI</h2>
+
+            <p>
+                Smart technology for healthier crops
+            </p>
+
+        </div>
+
+        <div class="about-container">
+
+            <p>
+                Crop Care AI is an AI-based plant disease detection
+                project designed to help users identify possible
+                diseases affecting crops from leaf images.
+                The system aims to make crop monitoring easier
+                by combining image analysis with useful crop-care
+                recommendations.
+            </p>
+
+            <div class="creator">
+                🌾 Project Created By Yogita Pol
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FOOTER -->
+    <footer>
+
+        <h3>
+            🌾 Crop Care AI
+        </h3>
+
+        <p>
+            Smart AI for Healthy Crops
+        </p>
+
+        <p>
+            Created by Yogita Pol
+        </p>
+
+        <p>
+            © 2026 Crop Care AI. All Rights Reserved.
+        </p>
+
+    </footer>
+
+
+    <!-- JAVASCRIPT -->
+    <script>
+
+        const imageInput =
+            document.getElementById("imageInput");
+
+        const preview =
+            document.getElementById("preview");
+
+        const analyzeBtn =
+            document.getElementById("analyzeBtn");
+
+        const result =
+            document.getElementById("result");
+
+
+        imageInput.addEventListener("change", function () {
+
+            const file = this.files[0];
+
+            if (file) {
+
+                const reader = new FileReader();
+
+                reader.onload = function (event) {
+
+                    preview.src = event.target.result;
+
+                    preview.style.display = "block";
+
+                    analyzeBtn.style.display = "block";
+
+                    result.style.display = "none";
+
+                };
+
+                reader.readAsDataURL(file);
+            }
+
+        });
+
+
+        function analyzePlant() {
+
+            analyzeBtn.innerHTML =
+                "⏳ Analyzing...";
+
+            analyzeBtn.disabled = true;
+
+            result.style.display = "none";
+
+
+            setTimeout(function () {
+
+                result.style.display = "block";
+
+                analyzeBtn.innerHTML =
+                    "🤖 Analyze Crop";
+
+                analyzeBtn.disabled = false;
+
+                result.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+            }, 2000);
+
+        }
+
+    </script>
+
+</body>
+</html>
