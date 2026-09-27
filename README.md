@@ -1,38 +1,26 @@
-# 🌿 CropCare AI
+# CropCare AI
 
-AI-powered plant leaf disease screening using a GitHub-hosted Streamlit application and a pretrained EfficientNetV2-S ONNX model.
-
-## Model
-CropCare AI uses **BiernyVR/crop-disease-classifier**, an EfficientNetV2-S model trained on the PlantVillage benchmark with 38 crop/disease/healthy classes. The model card reports 99.89% validation accuracy, but that is a benchmark result on PlantVillage and should not be interpreted as 99.89% real-world field accuracy.
-
-Model: https://huggingface.co/BiernyVR/crop-disease-classifier
+GitHub-ready Flask website for AI-assisted plant disease screening.
 
 ## Run locally
 
 ```bash
 pip install -r requirements.txt
-streamlit run app.py
+python app.py
 ```
 
-The model files are downloaded automatically from Hugging Face on first inference.
+Open http://127.0.0.1:5000
 
-## Deploy from GitHub
+## Model
 
-1. Open Streamlit Community Cloud.
-2. Connect GitHub.
-3. Select `yogita11pol-tech/cropcareai-by-yogitapol`.
-4. Main file: `app.py`.
-5. Deploy.
+Uses **BiernyVR/crop-disease-classifier** with EfficientNetV2-S and a limited PlantVillage class set.
 
-## Accuracy safeguards
-- Top-3 predictions are shown.
-- Results below 70% probability are explicitly marked uncertain.
-- Users are encouraged to provide a clearer/second image.
-- The app does not claim laboratory-level diagnosis.
-- Treatment advice is deliberately general; pesticide dose recommendations are not generated.
+The model is not an all-species/all-disease model and cannot guarantee exact field diagnosis. CropCare AI returns **UNSURE** when confidence, prediction margin or test-time augmentation agreement is insufficient.
 
-## Supported classes
-Apple, blueberry, cherry, corn, grape, orange, peach, bell pepper, potato, raspberry, soybean, squash, strawberry and tomato classes represented in the PlantVillage model.
+## Production start command
 
-## Important limitation
-PlantVillage contains curated leaf images. Real-world photographs can have different lighting, backgrounds, occlusion and multiple simultaneous problems. External field validation is required before making strong accuracy claims.
+```bash
+gunicorn --bind 0.0.0.0:$PORT app:app
+```
+
+The original `main` branch is intentionally unchanged. This complete website is in `cropcareai-complete`.
